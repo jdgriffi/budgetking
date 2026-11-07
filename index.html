@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>BudgetKing</title>
+<!-- Install as an iPhone app (Share → Add to Home Screen) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BudgetKing">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F3F6FA">
+<script>
+  // On an iPhone (or when launched from the Home Screen) fill the screen instead of drawing the iPhone frame.
+  (function () {
+    if (/iPhone|iPod/.test(navigator.userAgent) || navigator.standalone || matchMedia('(display-mode: standalone)').matches)
+      document.documentElement.classList.add('native');
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0F1E3D; --navy2:#46587A; --muted:#8C99AF;
+  --teal:#14B8A6; --teal-d:#0D9488; --teal-l:#E7F8F5;
+  --coral:#FF6B5B; --coral-d:#E8503F; --coral-l:#FFF0EE;
+  --bg:#F3F6FA; --card:#FFFFFF; --line:#EBF0F6;
+  --r:22px; --ease:cubic-bezier(.32,.72,0,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--navy);
+  background:radial-gradient(1200px 600px at 20% 0%,#DDF3F0 0%,transparent 60%),
+             radial-gradient(900px 600px at 100% 100%,#E3E9F7 0%,transparent 60%),#E9EEF5;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+.stage{width:390px;height:844px;flex:none;transform-origin:center}
+.phone{
+  position:relative;width:390px;height:844px;border-radius:56px;background:var(--bg);overflow:hidden;
+  box-shadow:0 0 0 10px #0B1222,0 0 0 12px #2B3549,0 50px 90px -30px rgba(15,30,61,.55);
+  isolation:isolate;
+}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:122px;height:35px;background:#000;border-radius:20px;z-index:80}
+.statusbar{
+  position:absolute;top:0;left:0;right:0;height:54px;z-index:70;display:flex;justify-content:space-between;align-items:center;
+  padding:6px 32px 0 40px;font-weight:600;font-size:16px;letter-spacing:-.2px;
+  background:linear-gradient(var(--bg) 65%,rgba(243,246,250,0));pointer-events:none;
+}
+.sb-icons{display:flex;gap:6px;align-items:center}
+.home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--navy);z-index:90;opacity:.9}
+
+/* panes */
+.screen{position:absolute;inset:0}
+.pane,.detail{position:absolute;inset:0;overflow-y:auto;padding:58px 20px 130px;scrollbar-width:none}
+.pane::-webkit-scrollbar,.detail::-webkit-scrollbar{display:none}
+.pane{opacity:0;transform:translateY(10px);pointer-events:none;transition:opacity .3s ease,transform .4s var(--ease)}
+.pane.active{opacity:1;transform:none;pointer-events:auto}
+.detail{background:var(--bg);transform:translateX(102%);transition:transform .42s var(--ease);z-index:5;box-shadow:-20px 0 40px -20px rgba(15,30,61,.2)}
+.detail.open{transform:none}
+.pane.pushed{transform:translateX(-24%);opacity:.6}
+
+/* type */
+h1{font-size:30px;font-weight:800;letter-spacing:-.8px;line-height:1.1}
+h2{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.eyebrow{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.2px}
+.muted{color:var(--muted);font-size:13px;font-weight:500}
+.cents{font-size:.55em;font-weight:700;opacity:.55;margin-left:1px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;margin:6px 2px 18px}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(140deg,#2DD4BF,#0D9488);display:grid;place-items:center;box-shadow:0 8px 18px -8px rgba(13,148,136,.7)}
+.pill{font-size:12px;font-weight:700;padding:7px 11px;border-radius:999px;background:#fff;color:var(--navy2);box-shadow:0 1px 2px rgba(15,30,61,.06)}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin:24px 4px 10px}
+.link{color:var(--teal-d);font-weight:700;font-size:14px}
+
+/* cards */
+.card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:0 1px 2px rgba(15,30,61,.04),0 10px 30px -16px rgba(15,30,61,.16)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.tap{transition:transform .2s var(--ease),background-color .2s,box-shadow .2s,opacity .2s;cursor:pointer;user-select:none}
+.tap:active{transform:scale(.965)}
+
+/* ring */
+.ring-card{padding:20px 18px 12px}
+.ring-wrap{position:relative;width:240px;height:240px;margin:0 auto 6px}
+.ring{width:240px;height:240px;overflow:visible}
+.ring .track{fill:none;stroke:#EEF2F7;stroke-width:22}
+.seg{fill:none;stroke-width:22;cursor:pointer;pointer-events:stroke;
+  transition:stroke-dasharray .7s var(--ease),stroke-dashoffset .7s var(--ease),stroke-width .3s var(--ease),opacity .3s}
+.seg.dim{opacity:.22}
+.seg.on{stroke-width:30}
+.ring-center{position:absolute;inset:50px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.ring-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;max-width:130px;line-height:1.25}
+.ring-amt{font-size:34px;font-weight:800;letter-spacing:-1.2px;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.ring-sub{font-size:12.5px;font-weight:600;color:var(--navy2)}
+.ring-sub.alert{color:var(--coral-d)}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.lg{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:14px;min-width:0}
+.lg.on{background:var(--teal-l)}
+.lg.dim{opacity:.45}
+.dot{width:10px;height:10px;border-radius:4px;flex:none}
+.lg-t{min-width:0;flex:1}
+.lg-n{font-size:12px;font-weight:600;color:var(--navy2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lg-v{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.stat{padding:14px 12px;border-radius:18px}
+.stat .k{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat .v{font-size:17px;font-weight:800;margin-top:5px;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+
+.alert-card{margin-top:12px;display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:18px;background:var(--coral-l);color:#8A2A1F}
+.alert-card.ok{background:var(--teal-l);color:#0B5F57}
+.alert-card .ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--coral);color:#fff;font-weight:800}
+.alert-card.ok .ic{background:var(--teal)}
+.alert-card b{display:block;font-size:14px;margin-bottom:2px;color:inherit}
+.alert-card p{font-size:13px;line-height:1.4}
+
+/* list rows */
+.list{padding:6px 0}
+.row{display:flex;align-items:center;gap:12px;padding:11px 16px;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;left:64px;right:16px;height:1px;background:var(--line)}
+.bubble{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:none}
+.row-t{flex:1;min-width:0}
+.row-n{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-s{font-size:12.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.row-a{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.row-b{font-size:11.5px;color:var(--muted);font-weight:600;text-align:right;margin-top:1px;font-variant-numeric:tabular-nums}
+.neg{color:var(--navy)}
+.pos{color:var(--teal-d)}
+
+/* spending */
+.sum-card .big{font-size:34px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums}
+.stackbar{display:flex;height:12px;border-radius:8px;overflow:hidden;background:#EEF2F7;margin:14px 0 10px;gap:2px}
+.stackbar i{display:block;height:100%;transition:width .6s var(--ease)}
+.sum-meta{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--navy2)}
+.cat-card{display:flex;flex-direction:column;gap:12px;padding:16px}
+.cat-top{display:flex;align-items:center;gap:12px}
+.bar{height:8px;border-radius:6px;background:#EEF2F7;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:6px;transition:width .6s var(--ease),background-color .3s}
+.cat-meta{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--muted)}
+.cat-meta b{color:var(--navy);font-weight:700}
+.cat-meta .over{color:var(--coral-d)}
+.chev{color:#B9C3D3;font-size:22px;font-weight:300;margin-left:2px}
+.tag{font-size:11px;font-weight:800;padding:3px 7px;border-radius:7px;background:var(--coral-l);color:var(--coral-d);margin-left:6px;vertical-align:2px}
+
+/* detail */
+.back{display:inline-flex;align-items:center;gap:4px;color:var(--teal-d);font-weight:700;font-size:16px;padding:6px 4px;margin:4px 0 8px -4px}
+.d-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.d-head .bubble{width:54px;height:54px;border-radius:17px;font-size:27px}
+.hero{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:left}
+.hero .k{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.hero .v{font-size:18px;font-weight:800;margin-top:4px;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.ledger .row{cursor:pointer}
+.ledger .start .bubble{background:var(--teal-l);color:var(--teal-d);font-weight:800;font-size:16px}
+.ledger .end{background:#F8FAFC;border-radius:0 0 var(--r) var(--r);margin-bottom:-6px}
+.row-actions{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s var(--ease)}
+.row-actions>div{overflow:hidden;display:flex;gap:8px;padding:0 16px 0 66px}
+.row-actions.open{grid-template-rows:1fr}
+.row-actions.open>div{padding-bottom:12px}
+.mini{font-size:13px;font-weight:700;padding:8px 14px;border-radius:11px;background:#F1F5F9;color:var(--navy2)}
+.mini.danger{background:var(--coral);color:#fff}
+.mini.teal{background:var(--teal-l);color:var(--teal-d)}
+.paused{opacity:.45}
+.paused .row-a{text-decoration:line-through}
+
+/* buttons */
+.btn{width:100%;padding:16px;border-radius:17px;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:linear-gradient(140deg,#2DD4BF,#0D9488);color:#fff;box-shadow:0 10px 22px -10px rgba(13,148,136,.75)}
+.btn.ghost{background:transparent;border:1.5px dashed #9FDCD3;color:var(--teal-d)}
+.btn.soft{background:#EEF2F7;color:var(--navy2)}
+.btn.danger{background:var(--coral);color:#fff;box-shadow:0 10px 22px -10px rgba(255,107,91,.8)}
+.btn.text-danger{color:var(--coral-d);background:#fff}
+
+/* config */
+.cfg-row{display:flex;align-items:center;gap:10px;padding:12px 14px;position:relative}
+.cfg-row+.cfg-row::before{content:"";position:absolute;top:0;left:14px;right:14px;height:1px;background:var(--line)}
+.stepper{display:flex;align-items:center;background:#F3F6FA;border-radius:12px;padding:3px}
+.stepper button{width:27px;height:30px;border-radius:9px;font-size:18px;font-weight:600;color:var(--teal-d);display:grid;place-items:center}
+.stepper button:active{background:#fff}
+.amt-in{width:50px;border:0;background:transparent;text-align:center;font-weight:800;font-size:14.5px;font-variant-numeric:tabular-nums;outline:none;-moz-appearance:textfield}
+.amt-in::-webkit-inner-spin-button,.amt-in::-webkit-outer-spin-button{-webkit-appearance:none}
+.amt-wrap{display:flex;align-items:center;font-weight:800;font-size:14.5px;color:var(--navy2)}
+.icon-btn{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:#B3BECE;flex:none}
+.icon-btn:active{background:var(--coral-l);color:var(--coral)}
+.icon-btn.lock{color:#CBD3DF;cursor:default}
+.switch{width:46px;height:28px;border-radius:999px;background:#D7DEE8;position:relative;flex:none;transition:background .25s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(15,30,61,.25);transition:transform .3s var(--ease)}
+.switch.on{background:var(--teal)}
+.switch.on::after{transform:translateX(18px)}
+.logo-l{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;flex:none}
+
+/* tab bar */
+.tabbar{
+  position:absolute;left:16px;right:16px;bottom:24px;height:70px;z-index:50;border-radius:28px;display:flex;padding:7px;
+  background:rgba(255,255,255,.58);backdrop-filter:blur(24px) saturate(190%);-webkit-backdrop-filter:blur(24px) saturate(190%);
+  border:1px solid rgba(255,255,255,.75);box-shadow:0 12px 34px -12px rgba(15,30,61,.28),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.tab-ind{position:absolute;top:7px;bottom:7px;left:7px;width:calc((100% - 14px)/3);border-radius:21px;background:rgba(20,184,166,.13);transition:transform .45s var(--ease)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#7B89A1;font-size:11px;font-weight:700;position:relative;z-index:1;transition:color .25s,transform .2s var(--ease)}
+.tab:active{transform:scale(.92)}
+.tab.active{color:var(--teal-d)}
+.tab svg{width:24px;height:24px}
+
+.fab{position:absolute;right:22px;bottom:110px;width:58px;height:58px;border-radius:20px;z-index:45;color:#fff;
+  background:linear-gradient(140deg,#2DD4BF,#0D9488);box-shadow:0 14px 26px -10px rgba(13,148,136,.85);display:grid;place-items:center;
+  transition:transform .35s var(--ease),opacity .25s}
+.fab:active{transform:scale(.9)}
+.fab.hide{transform:scale(.3);opacity:0;pointer-events:none}
+
+/* sheet */
+.backdrop{position:absolute;inset:0;background:rgba(15,30,61,.34);z-index:100;opacity:0;pointer-events:none;transition:opacity .35s}
+.backdrop.show{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:110;background:#fff;border-radius:30px 30px 0 0;padding:10px 20px 36px;max-height:88%;overflow-y:auto;
+  transform:translateY(105%);transition:transform .45s var(--ease);box-shadow:0 -20px 50px -20px rgba(15,30,61,.3);scrollbar-width:none}
+.sheet.show{transform:none}
+.grab{width:40px;height:5px;border-radius:3px;background:#D7DEE8;margin:0 auto 14px}
+.sheet h3{font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:14px}
+.sheet label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 2px 7px}
+.field{width:100%;padding:14px 15px;border-radius:14px;border:1.5px solid var(--line);background:#F8FAFC;font-size:15.5px;font-weight:600;outline:none;transition:border-color .2s,background .2s}
+.field:focus{border-color:var(--teal);background:#fff}
+.amount-field{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 0 2px}
+.amount-field span{font-size:34px;font-weight:800;color:var(--muted)}
+.amount-field input{width:200px;border:0;outline:none;font-size:46px;font-weight:800;letter-spacing:-1.5px;text-align:left;background:transparent;-moz-appearance:textfield}
+.amount-field input::-webkit-inner-spin-button{-webkit-appearance:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 12px;border-radius:12px;background:#F3F6FA;font-size:13.5px;font-weight:600;color:var(--navy2);display:flex;gap:6px;align-items:center;border:1.5px solid transparent}
+.chip.on{background:var(--teal-l);border-color:var(--teal);color:#0B5F57}
+.icons{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.icons button{aspect-ratio:1;border-radius:12px;background:#F3F6FA;font-size:20px;border:1.5px solid transparent}
+.icons button.on{background:var(--teal-l);border-color:var(--teal)}
+.impact{margin:16px 0 18px;padding:12px 14px;border-radius:14px;background:#F8FAFC;font-size:13.5px;font-weight:600;color:var(--navy2);display:flex;justify-content:space-between;gap:10px}
+.impact.alert{background:var(--coral-l);color:var(--coral-d)}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+
+/* toast */
+.toast{position:absolute;top:58px;left:50%;z-index:130;transform:translate(-50%,-30px);opacity:0;pointer-events:none;
+  background:var(--navy);color:#fff;padding:11px 12px 11px 16px;border-radius:16px;font-size:13.5px;font-weight:600;display:flex;gap:12px;align-items:center;
+  white-space:nowrap;box-shadow:0 14px 30px -12px rgba(15,30,61,.6);transition:transform .4s var(--ease),opacity .3s}
+.toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.toast button{color:#5EEAD4;font-weight:800;padding:2px 6px}
+.pop{animation:pop .45s var(--ease)}
+
+/* ---------- real iPhone: full screen, no fake frame ---------- */
+html.native,html.native body{height:100%;overflow:hidden;overscroll-behavior:none;background:var(--bg)}
+html.native body{display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html.native input{-webkit-user-select:text;user-select:text}
+html.native .stage{position:fixed;inset:0;width:100%;height:100%;transform:none!important}
+html.native .phone{width:100%;height:100%;border-radius:0;box-shadow:none}
+html.native .island,html.native .home-ind{display:none}
+html.native .statusbar{height:env(safe-area-inset-top);padding:0;background:var(--bg)}
+html.native .statusbar>*{display:none}
+html.native .pane,html.native .detail{padding-top:calc(env(safe-area-inset-top) + 14px);padding-bottom:calc(env(safe-area-inset-bottom) + 130px)}
+html.native .tabbar{bottom:max(12px,calc(env(safe-area-inset-bottom) - 4px))}
+html.native .fab{bottom:calc(max(12px,calc(env(safe-area-inset-bottom) - 4px)) + 86px)}
+html.native .toast{top:calc(env(safe-area-inset-top) + 10px)}
+html.native .sheet{padding-bottom:calc(env(safe-area-inset-bottom) + 20px)}
+html.native .field,html.native .amt-in{font-size:16px} /* 16px+ stops iOS zooming in on focus */
+@keyframes pop{0%{transform:scale(.96);opacity:.4}100%{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+<div class="phone">
+  <div class="island"></div>
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="sb-icons">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="#0F1E3D"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="#0F1E3D"><path d="M8 2.6c2.2 0 4.2.9 5.7 2.3l1.1-1.1A9.6 9.6 0 0 0 8 1C5.4 1 3 2 1.2 3.8l1.1 1.1C3.8 3.5 5.8 2.6 8 2.6Zm0 3.2c1.3 0 2.5.5 3.4 1.3l1.1-1.1A6.4 6.4 0 0 0 8 4.2c-1.7 0-3.3.7-4.5 1.8l1.1 1.1c.9-.8 2.1-1.3 3.4-1.3Zm0 3.2c-.5 0-1 .2-1.3.5L8 11l1.3-1.5C9 9.2 8.5 9 8 9Z"/></svg>
+      <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="#0F1E3D" opacity=".4"/><rect x="2" y="2" width="18" height="9" rx="2" fill="#0F1E3D"/><path d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2Z" fill="#0F1E3D" opacity=".45"/></svg>
+    </span>
+  </div>
+
+  <main class="screen">
+    <!-- HOME -->
+    <section class="pane active" id="pane-home">
+      <header class="top">
+        <div class="brand">
+          <div class="logo"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M3 8.5 7.5 12 12 5l4.5 7L21 8.5 19 18H5L3 8.5Z"/><rect x="5" y="19.2" width="14" height="2" rx="1"/></svg></div>
+          <div><div class="eyebrow" id="monthLabel">November 2026</div><h1>BudgetKing</h1></div>
+        </div>
+        <span class="pill" id="dayPill"></span>
+      </header>
+      <div class="card ring-card">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 240 240">
+            <circle class="track" cx="120" cy="120" r="92"/>
+            <g id="ringSegs" transform="rotate(-90 120 120)"></g>
+          </svg>
+          <div class="ring-center" data-act="sel" data-id="">
+            <div class="ring-label" id="ringLabel">Remaining to spend</div>
+            <div class="ring-amt" id="ringAmt"></div>
+            <div class="ring-sub" id="ringSub"></div>
+          </div>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div id="alerts"></div>
+      <div class="sec-head"><h2>Recent activity</h2><button class="link tap" data-act="tab" data-tab="spending">See all</button></div>
+      <div class="card list" id="recent"></div>
+    </section>
+
+    <!-- SPENDING -->
+    <section class="pane" id="pane-spending">
+      <header class="top"><div><div class="eyebrow">November 2026</div><h1>Spending</h1></div><span class="pill" id="spendPill"></span></header>
+      <div id="spendSummary"></div>
+      <div class="sec-head"><h2>Categories</h2><span class="muted">Tap to see deductions</span></div>
+      <div class="stack" id="spendList"></div>
+    </section>
+
+    <!-- CONFIGURE -->
+    <section class="pane" id="pane-config"></section>
+
+    <!-- CATEGORY DETAIL -->
+    <section class="detail" id="detail"></section>
+  </main>
+
+  <button class="fab hide" id="fab" data-act="add" aria-label="Add expense">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <nav class="tabbar">
+    <div class="tab-ind" id="tabInd"></div>
+    <button class="tab active" data-act="tab" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-6v6H5A1.5 1.5 0 0 1 3.5 19z"/></svg>Home
+    </button>
+    <button class="tab" data-act="tab" data-tab="spending">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.5 13A8.5 8.5 0 1 1 11 3.5V13z"/><path d="M14.5 3.6a8.5 8.5 0 0 1 5.9 5.9h-5.9z"/></svg>Spending
+    </button>
+    <button class="tab" data-act="tab" data-tab="config">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M21 18h-1"/><circle cx="16" cy="6" r="2.3"/><circle cx="10" cy="12" r="2.3"/><circle cx="17.7" cy="18" r="2.3"/></svg>Configure
+    </button>
+  </nav>
+  <div class="home-ind"></div>
+
+  <div class="backdrop" id="backdrop" data-act="close"></div>
+  <div class="sheet" id="sheet"></div>
+  <div class="toast" id="toast"></div>
+</div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const KEY = 'budgetking-v1';
+const R = 92, C = 2 * Math.PI * R;
+const PALETTE = ['#0EA5E9','#A855F7','#EAB308','#10B981','#6366F1','#D946EF','#F472B6','#64748B','#22D3EE','#FB923C'];
+const ICONS = ['✨','🎓','🐶','✈️','🎁','👶','💼','🏋️','🎮','🍷','💇','🏥','📚','🧾','💰','⛽'];
+
+/* ---------- date ---------- */
+const now = new Date();
+const pad = n => String(n).padStart(2, '0');
+const TODAY = (now.getFullYear() === 2026 && now.getMonth() === 10)
+  ? `2026-11-${pad(now.getDate())}` : '2026-11-07';
+const DAY = +TODAY.slice(8), DAYS_IN_MONTH = 30, DAYS_LEFT = DAYS_IN_MONTH - DAY + 1;
+const dLabel = d => new Date(d + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+/* ---------- data ---------- */
+function seed() {
+  let n = 0; const e = (catId, merchant, amount, day) => ({ id: 'e' + (++n), catId, merchant, amount, date: `2026-11-${pad(day)}` });
+  return {
+    categories: [
+      { id: 'housing',   name: 'Housing',            icon: '🏠', color: '#14B8A6', budget: 3600 },
+      { id: 'food',      name: 'Groceries & Dining', icon: '🛒', color: '#F59E0B', budget: 1800 },
+      { id: 'transport', name: 'Transportation',     icon: '🚗', color: '#3B82F6', budget: 1100 },
+      { id: 'utilities', name: 'Utilities',          icon: '💡', color: '#8B5CF6', budget: 700 },
+      { id: 'health',    name: 'Health & Fitness',   icon: '🩺', color: '#EC4899', budget: 800 },
+      { id: 'shopping',  name: 'Shopping & Fun',     icon: '🛍️', color: '#84CC16', budget: 1700 },
+      { id: 'subs',      name: 'Subscriptions',      icon: '🔁', color: '#334E9E', budget: 300, locked: true },
+    ],
+    expenses: [
+      e('housing', 'Rent · Maple Court Apts', 2450, 1),
+      e('housing', 'Lemonade Renters Insurance', 18.50, 1),
+      e('housing', 'The Home Depot', 86.42, 4),
+      e('housing', 'Handy Home Cleaning', 140, 6),
+      e('food', 'Whole Foods Market', 142.37, 2),
+      e('food', 'Chipotle', 24.60, 3),
+      e('food', "Trader Joe's", 88.15, 5),
+      e('food', 'Starbucks', 6.45, 6),
+      e('food', 'DoorDash · Thai Basil', 41.20, 7),
+      e('transport', 'Shell', 52.18, 2),
+      e('transport', 'Toyota Financial Services', 389, 3),
+      e('transport', 'Uber', 23.40, 5),
+      e('transport', 'SpotHero Parking', 18, 6),
+      e('utilities', 'Xfinity Internet', 79.99, 2),
+      e('utilities', 'PG&E Electric', 128.44, 4),
+      e('utilities', 'Verizon Wireless', 95, 5),
+      e('utilities', 'City Water & Sewer', 46.10, 7),
+      e('health', 'Planet Fitness', 24.99, 1),
+      e('health', 'CVS Pharmacy', 32.18, 3),
+      e('health', 'Bright Smile Dental copay', 45, 6),
+      e('shopping', 'Amazon', 67.89, 2),
+      e('shopping', 'Target', 112.43, 4),
+      e('shopping', 'AMC Theatres', 34.50, 5),
+      e('shopping', 'Ticketmaster', 158, 7),
+    ],
+    subs: [
+      { id: 's1', name: 'Netflix Standard', amount: 15.49, day: 3, active: true, color: '#E50914' },
+      { id: 's2', name: 'Spotify Premium', amount: 11.99, day: 5, active: true, color: '#1DB954' },
+      { id: 's3', name: 'Hulu', amount: 17.99, day: 9, active: true, color: '#1CE783' },
+      { id: 's4', name: 'Disney+', amount: 13.99, day: 12, active: true, color: '#113CCF' },
+      { id: 's5', name: 'Amazon Prime', amount: 14.99, day: 14, active: true, color: '#00A8E1' },
+      { id: 's6', name: 'iCloud+ 200 GB', amount: 2.99, day: 15, active: true, color: '#5AC8FA' },
+      { id: 's7', name: 'YouTube Premium', amount: 13.99, day: 18, active: true, color: '#FF0033' },
+      { id: 's8', name: 'Peloton App', amount: 12.99, day: 21, active: true, color: '#181A1D' },
+      { id: 's9', name: 'Adobe Creative Cloud', amount: 59.99, day: 24, active: true, color: '#DA1F26' },
+      { id: 's10', name: 'ChatGPT Plus', amount: 20.00, day: 27, active: true, color: '#10A37F' },
+    ],
+  };
+}
+function load() { try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+let S = load() || seed();
+const ui = { tab: 'home', sel: null, detail: null, openRow: null, sheetCat: null, sheetIcon: '✨', firstRing: true };
+
+/* ---------- helpers ---------- */
+const r2 = n => Math.round(n * 100) / 100;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => (n < 0 ? '−' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt0 = n => (n < 0 ? '−' : '') + '$' + Math.round(Math.abs(n)).toLocaleString('en-US');
+function money(n) {
+  const neg = n < 0; const [d, c] = Math.abs(n).toFixed(2).split('.');
+  return `${neg ? '−' : ''}$${Number(d).toLocaleString('en-US')}<span class="cents">.${c}</span>`;
+}
+const cat = id => S.categories.find(c => c.id === id);
+const subTotal = () => r2(S.subs.filter(s => s.active).reduce((a, s) => a + s.amount, 0));
+function spentOf(c) {
+  let s = S.expenses.filter(e => e.catId === c.id).reduce((a, e) => a + e.amount, 0);
+  if (c.id === 'subs') s += subTotal();
+  return r2(s);
+}
+function totals() {
+  const budget = r2(S.categories.reduce((a, c) => a + c.budget, 0));
+  const spent = r2(S.categories.reduce((a, c) => a + spentOf(c), 0));
+  const remaining = r2(S.categories.reduce((a, c) => a + Math.max(0, c.budget - spentOf(c)), 0));
+  return { budget, spent, remaining };
+}
+const tint = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, '0');
+function tween(el, to, render = money) {
+  const from = parseFloat(el.dataset.v ?? to); el.dataset.v = to;
+  cancelAnimationFrame(el._raf);
+  const t0 = performance.now(), d = 650;
+  const step = t => {
+    const p = Math.min(1, (t - t0) / d), k = 1 - Math.pow(1 - p, 3);
+    el.innerHTML = render(from + (to - from) * k);
+    if (p < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+const buzz = () => { try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} };
+
+/* ---------- HOME ---------- */
+function updateRing() {
+  const g = $('#ringSegs');
+  const cats = S.categories;
+  const rems = cats.map(c => Math.max(0, c.budget - spentOf(c)));
+  const total = rems.reduce((a, b) => a + b, 0);
+  const gap = rems.filter(v => v > 0).length > 1 ? 3 : 0;
+  [...g.children].forEach(el => { if (!cat(el.dataset.id)) el.remove(); });
+  let start = 0;
+  cats.forEach((c, i) => {
+    let el = g.querySelector(`[data-id="${c.id}"]`);
+    if (!el) {
+      el = document.createElementNS(NS, 'circle');
+      el.setAttribute('cx', 120); el.setAttribute('cy', 120); el.setAttribute('r', R);
+      el.setAttribute('class', 'seg');
+      el.dataset.id = c.id; el.dataset.act = 'sel';
+      el.style.strokeDasharray = `0 ${C}`; el.style.strokeDashoffset = `${-start}`;
+      g.appendChild(el); el.getBoundingClientRect();
+    }
+    const frac = total ? rems[i] / total : 0;
+    const len = Math.max(0, frac * C - (rems[i] > 0 ? gap : 0));
+    el.setAttribute('stroke', c.color);
+    el.style.strokeDasharray = `${len} ${C}`;
+    el.style.strokeDashoffset = `${-start}`;
+    el.classList.toggle('dim', !!ui.sel && ui.sel !== c.id);
+    el.classList.toggle('on', ui.sel === c.id);
+    start += frac * C;
+  });
+}
+
+function renderHome() {
+  const t = totals();
+  $('#dayPill').textContent = `Day ${DAY} of ${DAYS_IN_MONTH}`;
+  if (ui.firstRing) { ui.firstRing = false; requestAnimationFrame(() => requestAnimationFrame(updateRing)); } else updateRing();
+
+  const sc = ui.sel && cat(ui.sel);
+  if (!sc) ui.sel = null;
+  const sub = $('#ringSub');
+  if (sc) {
+    const rem = sc.budget - spentOf(sc);
+    $('#ringLabel').textContent = sc.name;
+    tween($('#ringAmt'), rem);
+    sub.textContent = rem < 0 ? `Over budget by ${fmt(-rem)}` : `left of ${fmt0(sc.budget)} · ${t.remaining ? Math.round(Math.max(0, rem) / t.remaining * 100) : 0}% of total`;
+    sub.className = 'ring-sub' + (rem < 0 || rem / sc.budget < .1 ? ' alert' : '');
+  } else {
+    $('#ringLabel').textContent = 'Remaining to spend';
+    tween($('#ringAmt'), t.remaining);
+    const pct = t.budget ? Math.round(t.spent / t.budget * 100) : 0;
+    sub.textContent = `of ${fmt0(t.budget)} · ${pct}% spent`;
+    sub.className = 'ring-sub' + (pct >= 90 ? ' alert' : '');
+  }
+
+  $('#legend').innerHTML = S.categories.map(c => {
+    const rem = c.budget - spentOf(c);
+    return `<div class="lg tap ${ui.sel === c.id ? 'on' : ''} ${ui.sel && ui.sel !== c.id ? 'dim' : ''}" data-act="sel" data-id="${c.id}">
+      <span class="dot" style="background:${c.color}"></span>
+      <div class="lg-t"><div class="lg-n">${esc(c.name)}</div><div class="lg-v" style="${rem < 0 ? 'color:var(--coral-d)' : ''}">${fmt0(Math.max(0, rem))}${rem < 0 ? ' <span class="tag" style="margin-left:2px">OVER</span>' : ''}</div></div>
+    </div>`;
+  }).join('');
+
+  $('#stats').innerHTML = `
+    <div class="card stat"><div class="k">Spent</div><div class="v" id="stSpent"></div></div>
+    <div class="card stat"><div class="k">Budget</div><div class="v" id="stBudget"></div></div>
+    <div class="card stat"><div class="k">Per day</div><div class="v" id="stDay"></div></div>`;
+  ['stSpent', 'stBudget', 'stDay'].forEach((id, i) => {
+    const el = $('#' + id), v = [t.spent, t.budget, t.remaining / DAYS_LEFT][i];
+    const prev = homeCache[id]; el.dataset.v = prev ?? v; homeCache[id] = v;
+    tween(el, v, fmt0);
+  });
+
+  const warn = S.categories.map(c => ({ c, s: spentOf(c) })).filter(x => x.c.budget > 0 ? x.s / x.c.budget >= .9 : x.s > 0);
+  $('#alerts').innerHTML = warn.length
+    ? `<div class="alert-card pop"><div class="ic">!</div><div><b>${warn.length} categor${warn.length > 1 ? 'ies need' : 'y needs'} attention</b><p>${warn.map(x => {
+        const d = x.c.budget - x.s; return `${esc(x.c.name)} ${d < 0 ? `is over by <b style="display:inline">${fmt(-d)}</b>` : `is ${Math.round(x.s / x.c.budget * 100)}% spent`}`;
+      }).join('<br>')}</p></div></div>`
+    : `<div class="alert-card ok"><div class="ic">✓</div><div><b>Every category is on track</b><p>You can spend about ${fmt0(t.remaining / DAYS_LEFT)} a day for the next ${DAYS_LEFT} days.</p></div></div>`;
+
+  const recent = S.expenses.map((e, i) => ({ e, i })).sort((a, b) => b.e.date.localeCompare(a.e.date) || b.i - a.i).slice(0, 6).map(x => x.e);
+  $('#recent').innerHTML = recent.length ? recent.map(e => {
+    const c = cat(e.catId);
+    return `<div class="row tap" data-act="open" data-id="${c.id}">
+      <div class="bubble" style="background:${tint(c.color, .14)}">${c.icon}</div>
+      <div class="row-t"><div class="row-n">${esc(e.merchant)}</div><div class="row-s">${esc(c.name)} · ${dLabel(e.date)}</div></div>
+      <div class="row-a neg">−${fmt(e.amount)}</div></div>`;
+  }).join('') : `<div class="row"><div class="row-t muted">No expenses yet this month.</div></div>`;
+}
+const homeCache = {};
+
+/* ---------- SPENDING ---------- */
+function renderSpending() {
+  const t = totals();
+  $('#spendPill').textContent = `${S.expenses.length + S.subs.filter(s => s.active).length} deductions`;
+  $('#spendSummary').innerHTML = `
+    <div class="card sum-card">
+      <div class="eyebrow">Spent this month</div>
+      <div class="big">${money(t.spent)}</div>
+      <div class="stackbar">${S.categories.map(c => `<i style="width:${t.budget ? spentOf(c) / Math.max(t.budget, t.spent) * 100 : 0}%;background:${c.color}"></i>`).join('')}</div>
+      <div class="sum-meta"><span>of ${fmt0(t.budget)} budget</span><span style="color:${t.spent > t.budget ? 'var(--coral-d)' : 'var(--teal-d)'}">${t.spent > t.budget ? fmt0(t.spent - t.budget) + ' over' : fmt0(t.budget - t.spent) + ' left'}</span></div>
+    </div>`;
+  $('#spendList').innerHTML = S.categories.map(c => {
+    const s = spentOf(c), rem = c.budget - s, pct = c.budget ? s / c.budget : (s > 0 ? 1 : 0);
+    const n = S.expenses.filter(e => e.catId === c.id).length + (c.id === 'subs' ? S.subs.filter(x => x.active).length : 0);
+    const alert = pct >= .9;
+    return `<div class="card cat-card tap" data-act="open" data-id="${c.id}">
+      <div class="cat-top">
+        <div class="bubble" style="background:${tint(c.color, .14)}">${c.icon}</div>
+        <div class="row-t"><div class="row-n">${esc(c.name)}${rem < 0 ? '<span class="tag">OVER</span>' : alert ? '<span class="tag">' + Math.round(pct * 100) + '%</span>' : ''}</div>
+          <div class="row-s">${n} deduction${n === 1 ? '' : 's'}</div></div>
+        <div><div class="row-a" style="${rem < 0 ? 'color:var(--coral-d)' : ''}">${fmt(rem)}</div><div class="row-b">left</div></div>
+        <span class="chev">›</span>
+      </div>
+      <div class="bar"><i style="width:${Math.min(100, pct * 100)}%;background:${alert ? 'var(--coral)' : c.color}"></i></div>
+      <div class="cat-meta"><span><b>${fmt(s)}</b> spent</span><span class="${rem < 0 ? 'over' : ''}">Budget ${fmt0(c.budget)}</span></div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- DETAIL ---------- */
+function openDetail(id) {
+  ui.detail = id; ui.openRow = null;
+  if (ui.tab !== 'spending') setTab('spending', true);
+  renderDetail();
+  const d = $('#detail'); d.scrollTop = 0;
+  requestAnimationFrame(() => { d.classList.add('open'); $('#pane-spending').classList.add('pushed'); });
+  syncFab();
+}
+function closeDetail() {
+  $('#detail').classList.remove('open'); $('#pane-spending').classList.remove('pushed');
+  ui.detail = null; syncFab();
+}
+function renderDetail() {
+  const c = cat(ui.detail);
+  if (!c) { closeDetail(); return; }
+  const s = spentOf(c), rem = c.budget - s;
+  const isSubs = c.id === 'subs';
+  let items = S.expenses.filter(e => e.catId === c.id).map(e => ({ kind: 'e', id: e.id, name: e.merchant, amount: e.amount, date: e.date, active: true }));
+  if (isSubs) items = items.concat(S.subs.map(x => ({ kind: 's', id: x.id, name: x.name, amount: x.amount, date: `2026-11-${pad(x.day)}`, active: x.active, sub: x })));
+  items.sort((a, b) => a.date.localeCompare(b.date));
+  let bal = c.budget;
+  const rows = items.map(it => {
+    if (it.active) bal = r2(bal - it.amount);
+    const open = ui.openRow === it.id;
+    const upcoming = it.kind === 's' && it.date > TODAY;
+    return `<div class="row tap ${it.active ? '' : 'paused'}" data-act="row" data-id="${it.id}">
+        ${it.kind === 's' ? `<div class="logo-l" style="background:${it.sub.color}">${esc(it.name[0])}</div>` : `<div class="bubble" style="background:${tint(c.color, .14)}">${c.icon}</div>`}
+        <div class="row-t"><div class="row-n">${esc(it.name)}</div><div class="row-s">${dLabel(it.date)}${it.kind === 's' ? (it.active ? (upcoming ? ' · renews' : ' · charged') : ' · paused') : ''}</div></div>
+        <div><div class="row-a neg">−${fmt(it.amount)}</div><div class="row-b" style="${bal < 0 && it.active ? 'color:var(--coral-d)' : ''}">${it.active ? 'bal ' + fmt(bal) : 'not counted'}</div></div>
+      </div>
+      <div class="row-actions ${open ? 'open' : ''}"><div>
+        ${it.kind === 's'
+          ? `<button class="mini ${it.active ? '' : 'teal'} tap" data-act="subtoggle" data-id="${it.id}">${it.active ? 'Pause subscription' : 'Resume subscription'}</button>`
+          : `<button class="mini danger tap" data-act="delexp" data-id="${it.id}">Delete deduction</button>`}
+        <button class="mini tap" data-act="row" data-id="${it.id}">Cancel</button>
+      </div></div>`;
+  }).join('');
+
+  $('#detail').innerHTML = `
+    <button class="back tap" data-act="back"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2 2 10l8 8"/></svg>Spending</button>
+    <div class="d-head"><div class="bubble" style="background:${tint(c.color, .16)}">${c.icon}</div>
+      <div><div class="eyebrow">November 2026</div><h1 style="font-size:26px">${esc(c.name)}</h1></div></div>
+    <div class="card">
+      <div class="hero">
+        <div><div class="k">Budget</div><div class="v">${fmt0(c.budget)}</div></div>
+        <div><div class="k">Spent</div><div class="v">${fmt0(s)}</div></div>
+        <div><div class="k">Left</div><div class="v" style="color:${rem < 0 ? 'var(--coral-d)' : 'var(--teal-d)'}">${fmt0(rem)}</div></div>
+      </div>
+      <div class="bar" style="margin-top:14px"><i style="width:${Math.min(100, c.budget ? s / c.budget * 100 : 100)}%;background:${c.budget && s / c.budget < .9 ? c.color : 'var(--coral)'}"></i></div>
+    </div>
+    <div class="sec-head"><h2>Ledger</h2><span class="muted">Tap a row to ${isSubs ? 'pause or delete' : 'delete'}</span></div>
+    <div class="card list ledger">
+      <div class="row start"><div class="bubble">$</div>
+        <div class="row-t"><div class="row-n">Starting budget</div><div class="row-s">Nov 1</div></div>
+        <div class="row-a pos">+${fmt(c.budget)}</div></div>
+      ${rows || `<div class="row"><div class="row-t muted" style="padding-left:50px">No deductions yet.</div></div>`}
+      <div class="row end"><div class="row-t"><div class="row-n" style="font-weight:800">Remaining</div></div>
+        <div class="row-a" style="font-size:17px;font-weight:800;color:${rem < 0 ? 'var(--coral-d)' : 'var(--teal-d)'}">${fmt(rem)}</div></div>
+    </div>
+    <div style="margin-top:16px">${isSubs
+      ? `<button class="btn ghost tap" data-act="tab" data-tab="config">Manage subscriptions</button>`
+      : `<button class="btn primary tap" data-act="add" data-cat="${c.id}">Add expense to ${esc(c.name)}</button>`}</div>`;
+}
+
+/* ---------- CONFIGURE ---------- */
+function renderConfig() {
+  const t = totals();
+  const active = S.subs.filter(s => s.active);
+  $('#pane-config').innerHTML = `
+    <header class="top"><div><div class="eyebrow">November 2026</div><h1>Configure</h1></div></header>
+    <div class="card sum-card">
+      <div class="eyebrow">Monthly budget</div>
+      <div class="big" id="cfgTotal">${money(t.budget)}</div>
+      <div class="sum-meta" style="margin-top:6px"><span id="cfgCount">Across ${S.categories.length} categories</span><span id="cfgSpent">${fmt0(t.spent)} spent</span></div>
+    </div>
+
+    <div class="sec-head"><h2>Category budgets</h2><span class="muted">±$50 steps</span></div>
+    <div class="card list" style="padding:4px 0">
+      ${S.categories.map(c => `
+        <div class="cfg-row">
+          <div class="bubble" style="background:${tint(c.color, .14)};width:36px;height:36px;font-size:17px">${c.icon}</div>
+          <div class="row-t"><div class="row-n" style="font-size:14px">${esc(c.name)}</div><div class="row-s" id="cfgSp-${c.id}">${fmt0(spentOf(c))} spent</div></div>
+          <div class="stepper">
+            <button class="tap" data-act="step" data-id="${c.id}" data-d="-50" aria-label="Decrease">−</button>
+            <span class="amt-wrap">$<input class="amt-in" type="number" inputmode="decimal" min="0" step="1" data-id="${c.id}" value="${c.budget}"></span>
+            <button class="tap" data-act="step" data-id="${c.id}" data-d="50" aria-label="Increase">+</button>
+          </div>
+          ${c.locked
+            ? `<span class="icon-btn lock" title="Built-in category"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>`
+            : `<button class="icon-btn tap" data-act="delcat" data-id="${c.id}" aria-label="Remove ${esc(c.name)}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>`}
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:12px"><button class="btn ghost tap" data-act="addcat">+ Add category</button></div>
+
+    <div class="sec-head"><h2>Subscriptions</h2><span class="muted">${active.length} active · ${fmt(subTotal())}/mo</span></div>
+    <div class="card list" style="padding:4px 0">
+      ${S.subs.length ? S.subs.map(x => `
+        <div class="cfg-row ${x.active ? '' : 'paused'}" style="opacity:1">
+          <div class="logo-l" style="background:${x.color};${x.active ? '' : 'opacity:.4'}">${esc(x.name[0])}</div>
+          <div class="row-t"><div class="row-n" style="font-size:14px">${esc(x.name)}</div><div class="row-s">${fmt(x.amount)} · renews Nov ${x.day}</div></div>
+          <button class="switch tap ${x.active ? 'on' : ''}" data-act="subtoggle" data-id="${x.id}" aria-label="Toggle ${esc(x.name)}"></button>
+          <button class="icon-btn tap" data-act="delsub" data-id="${x.id}" aria-label="Remove ${esc(x.name)}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+        </div>`).join('') : `<div class="cfg-row muted">No subscriptions.</div>`}
+    </div>
+    <div style="margin-top:12px"><button class="btn ghost tap" data-act="addsub">+ Add subscription</button></div>
+
+    <div class="sec-head"><h2>Data</h2></div>
+    <button class="btn text-danger card tap" data-act="reset">Reset to demo data</button>`;
+}
+function refreshConfigNumbers() {
+  const t = totals();
+  const el = $('#cfgTotal'); if (el) el.innerHTML = money(t.budget);
+  const sp = $('#cfgSpent'); if (sp) sp.textContent = `${fmt0(t.spent)} spent`;
+}
+
+/* ---------- global ---------- */
+function renderAll() { renderHome(); renderSpending(); renderConfig(); if (ui.detail) renderDetail(); }
+function commit() { save(); renderAll(); }
+
+function setTab(tab, keepDetail) {
+  ui.tab = tab;
+  if (!keepDetail && ui.detail) closeDetail();
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + tab));
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const i = ['home', 'spending', 'config'].indexOf(tab);
+  $('#tabInd').style.transform = `translateX(${i * 100}%)`;
+  $('#pane-' + tab).scrollTop = 0;
+  syncFab();
+}
+function syncFab() {
+  const hide = ui.tab === 'config' || (ui.detail === 'subs');
+  $('#fab').classList.toggle('hide', hide);
+  $('#fab').dataset.cat = ui.detail && ui.detail !== 'subs' ? ui.detail : '';
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg, undo) {
+  const t = $('#toast');
+  t.innerHTML = `<span>${msg}</span>${undo ? '<button data-act="undo">Undo</button>' : ''}`;
+  toast.undo = undo;
+  t.classList.add('show'); clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), undo ? 4200 : 2200);
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html) {
+  $('#sheet').innerHTML = '<div class="grab"></div>' + html;
+  $('#sheet').scrollTop = 0;
+  $('#backdrop').classList.add('show'); $('#sheet').classList.add('show');
+}
+function closeSheet() { $('#backdrop').classList.remove('show'); $('#sheet').classList.remove('show'); }
+
+function sheetExpense(catId) {
+  const choices = S.categories.filter(c => c.id !== 'subs');
+  ui.sheetCat = catId && cat(catId) && catId !== 'subs' ? catId : (choices[0] && choices[0].id);
+  if (!ui.sheetCat) { toast('Add a category first'); return; }
+  openSheet(`
+    <h3>Add expense</h3>
+    <div class="amount-field"><span>$</span><input id="fAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00"></div>
+    <label>Merchant</label><input id="fMerchant" class="field" placeholder="e.g. Trader Joe's" maxlength="40">
+    <label>Category</label><div class="chips" id="fChips">${chipsHtml()}</div>
+    <label>Date</label><input id="fDate" class="field" type="date" min="2026-11-01" max="2026-11-30" value="${TODAY}">
+    <div class="impact" id="fImpact"></div>
+    <button class="btn primary tap" data-act="saveexp">Add expense</button>`);
+  updateImpact();
+  setTimeout(() => $('#fAmt') && $('#fAmt').focus({ preventScroll: true }), 420);
+}
+function chipsHtml() {
+  return S.categories.filter(c => c.id !== 'subs').map(c =>
+    `<button class="chip tap ${ui.sheetCat === c.id ? 'on' : ''}" data-act="chip" data-id="${c.id}">${c.icon} ${esc(c.name)}</button>`).join('');
+}
+function updateImpact() {
+  const el = $('#fImpact'); if (!el) return;
+  const c = cat(ui.sheetCat); const amt = parseFloat($('#fAmt').value) || 0;
+  const before = c.budget - spentOf(c), after = r2(before - amt);
+  el.className = 'impact' + (after < 0 ? ' alert' : '');
+  el.innerHTML = `<span>${c.icon} ${esc(c.name)} left</span><span>${fmt(before)} → <b>${fmt(after)}</b></span>`;
+}
+function sheetCategory() {
+  ui.sheetIcon = '✨';
+  openSheet(`
+    <h3>New category</h3>
+    <label>Name</label><input id="cName" class="field" placeholder="e.g. Travel" maxlength="24">
+    <label>Icon</label><div class="icons" id="cIcons">${iconsHtml()}</div>
+    <label>Monthly budget</label><input id="cBudget" class="field" type="number" inputmode="decimal" min="0" placeholder="500">
+    <div class="impact" id="cImpact"><span>New monthly total</span><b>${fmt0(totals().budget)}</b></div>
+    <button class="btn primary tap" data-act="savecat">Add category</button>`);
+  setTimeout(() => $('#cName') && $('#cName').focus({ preventScroll: true }), 420);
+}
+const iconsHtml = () => ICONS.map(i => `<button class="tap ${ui.sheetIcon === i ? 'on' : ''}" data-act="icon" data-id="${i}">${i}</button>`).join('');
+function sheetSub() {
+  openSheet(`
+    <h3>New subscription</h3>
+    <label>Service</label><input id="sName" class="field" placeholder="e.g. Max" maxlength="28">
+    <label>Monthly price</label><input id="sAmt" class="field" type="number" inputmode="decimal" step="0.01" min="0" placeholder="9.99">
+    <label>Renews on day</label><input id="sDay" class="field" type="number" min="1" max="28" value="${Math.min(28, DAY + 1)}">
+    <div class="impact" id="sImpact"></div>
+    <button class="btn primary tap" data-act="savesub">Add subscription</button>`);
+  updateSubImpact();
+  setTimeout(() => $('#sName') && $('#sName').focus({ preventScroll: true }), 420);
+}
+function updateSubImpact() {
+  const el = $('#sImpact'); if (!el) return;
+  const c = cat('subs'); const amt = parseFloat($('#sAmt').value) || 0;
+  const before = c.budget - spentOf(c), after = r2(before - amt);
+  el.className = 'impact' + (after < 0 ? ' alert' : '');
+  el.innerHTML = `<span>🔁 Subscriptions left</span><span>${fmt(before)} → <b>${fmt(after)}</b></span>`;
+}
+function sheetDeleteCat(id) {
+  const c = cat(id); const n = S.expenses.filter(e => e.catId === id);
+  const amt = r2(n.reduce((a, e) => a + e.amount, 0));
+  openSheet(`
+    <h3>Remove ${esc(c.name)}?</h3>
+    <p style="font-size:15px;line-height:1.5;color:var(--navy2)">Its ${fmt0(c.budget)} budget will come off your monthly total${n.length ? `, and its <b>${n.length} expense${n.length > 1 ? 's' : ''} (${fmt(amt)})</b> will be deleted` : ''}.</p>
+    <div class="btn-row"><button class="btn soft tap" data-act="close">Cancel</button><button class="btn danger tap" data-act="confirmdel" data-id="${id}">Remove</button></div>`);
+}
+function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+/* ---------- events ---------- */
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act]'); if (!t) return;
+  const { act, id } = t.dataset;
+  if (ev.isTrusted) buzz();
+  switch (act) {
+    case 'tab':
+      if (t.dataset.tab === ui.tab && ui.detail) { closeDetail(); break; }
+      setTab(t.dataset.tab); break;
+    case 'sel':
+      ui.sel = (!id || ui.sel === id) ? null : id; renderHome(); break;
+    case 'open': openDetail(id); break;
+    case 'back': closeDetail(); break;
+    case 'row':
+      ui.openRow = ui.openRow === id ? null : id; renderDetail(); break;
+    case 'add': sheetExpense(t.dataset.cat || (ui.detail !== 'subs' ? ui.detail : null)); break;
+    case 'chip':
+      ui.sheetCat = id; $('#fChips').innerHTML = chipsHtml(); updateImpact(); break;
+    case 'saveexp': {
+      const a = $('#fAmt'), amt = r2(parseFloat(a.value));
+      if (!(amt > 0)) { shake(a.parentElement); a.focus(); break; }
+      const merchant = $('#fMerchant').value.trim() || 'Expense';
+      const date = /^2026-11-\d\d$/.test($('#fDate').value) ? $('#fDate').value : TODAY;
+      S.expenses.push({ id: 'e' + Date.now(), catId: ui.sheetCat, merchant, amount: amt, date });
+      closeSheet(); commit();
+      toast(`Added ${fmt(amt)} to ${esc(cat(ui.sheetCat).name)}`);
+      break;
+    }
+    case 'delexp': {
+      const i = S.expenses.findIndex(e => e.id === id); if (i < 0) break;
+      const [gone] = S.expenses.splice(i, 1); ui.openRow = null; commit();
+      toast(`Deleted ${fmt(gone.amount)}`, () => { S.expenses.splice(i, 0, gone); commit(); });
+      break;
+    }
+    case 'subtoggle': {
+      const x = S.subs.find(s => s.id === id); if (!x) break;
+      x.active = !x.active; ui.openRow = null; commit();
+      toast(`${esc(x.name)} ${x.active ? 'resumed' : 'paused'}`);
+      break;
+    }
+    case 'delsub': {
+      const i = S.subs.findIndex(s => s.id === id); if (i < 0) break;
+      const [gone] = S.subs.splice(i, 1); commit();
+      toast(`Removed ${esc(gone.name)}`, () => { S.subs.splice(i, 0, gone); commit(); });
+      break;
+    }
+    case 'step': {
+      const c = cat(id); c.budget = Math.max(0, Math.round((c.budget + +t.dataset.d) / 50) * 50 || 0);
+      if (+t.dataset.d < 0 && c.budget === 0) c.budget = 0;
+      commit(); break;
+    }
+    case 'delcat': sheetDeleteCat(id); break;
+    case 'confirmdel': {
+      S.categories = S.categories.filter(c => c.id !== id);
+      S.expenses = S.expenses.filter(e => e.catId !== id);
+      if (ui.sel === id) ui.sel = null;
+      closeSheet(); commit(); toast('Category removed'); break;
+    }
+    case 'addcat': sheetCategory(); break;
+    case 'icon': ui.sheetIcon = id; $('#cIcons').innerHTML = iconsHtml(); break;
+    case 'savecat': {
+      const n = $('#cName'), name = n.value.trim();
+      if (!name) { shake(n); n.focus(); break; }
+      const budget = Math.max(0, r2(parseFloat($('#cBudget').value) || 0));
+      const used = S.categories.map(c => c.color);
+      const color = PALETTE.find(p => !used.includes(p)) || PALETTE[S.categories.length % PALETTE.length];
+      S.categories.push({ id: 'c' + Date.now(), name, icon: ui.sheetIcon, color, budget });
+      closeSheet(); commit(); toast(`Added ${esc(name)}`); break;
+    }
+    case 'addsub': sheetSub(); break;
+    case 'savesub': {
+      const n = $('#sName'), a = $('#sAmt'), name = n.value.trim(), amt = r2(parseFloat(a.value));
+      if (!name) { shake(n); n.focus(); break; }
+      if (!(amt > 0)) { shake(a); a.focus(); break; }
+      const day = Math.min(28, Math.max(1, parseInt($('#sDay').value) || 1));
+      S.subs.push({ id: 's' + Date.now(), name, amount: amt, day, active: true, color: PALETTE[S.subs.length % PALETTE.length] });
+      closeSheet(); commit(); toast(`Added ${esc(name)}`); break;
+    }
+    case 'reset':
+      openSheet(`<h3>Reset demo data?</h3><p style="font-size:15px;line-height:1.5;color:var(--navy2)">This restores the $10,000 budget, 24 expenses and 10 subscriptions. Your changes will be lost.</p>
+        <div class="btn-row"><button class="btn soft tap" data-act="close">Cancel</button><button class="btn danger tap" data-act="confirmreset">Reset</button></div>`);
+      break;
+    case 'confirmreset':
+      S = seed(); ui.sel = null; closeSheet(); commit(); toast('Demo data restored'); break;
+    case 'undo':
+      if (toast.undo) { toast.undo(); toast.undo = null; } $('#toast').classList.remove('show'); break;
+    case 'close': closeSheet(); break;
+  }
+});
+
+document.addEventListener('input', ev => {
+  const el = ev.target;
+  if (el.classList.contains('amt-in')) {
+    const c = cat(el.dataset.id); const v = parseFloat(el.value);
+    if (!c || isNaN(v) || v < 0) return;
+    c.budget = r2(v); save();
+    renderHome(); renderSpending(); if (ui.detail) renderDetail(); refreshConfigNumbers();
+  } else if (el.id === 'fAmt') updateImpact();
+  else if (el.id === 'sAmt') updateSubImpact();
+  else if (el.id === 'cBudget') {
+    const v = parseFloat(el.value) || 0;
+    $('#cImpact').innerHTML = `<span>New monthly total</span><b>${fmt0(totals().budget + v)}</b>`;
+  }
+});
+document.addEventListener('change', ev => { if (ev.target.classList.contains('amt-in')) renderConfig(); });
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && ev.target.classList.contains('amt-in')) ev.target.blur();
+  if (ev.key === 'Escape') closeSheet();
+});
+
+/* ---------- fit frame to window ---------- */
+function fit() {
+  if (document.documentElement.classList.contains('native')) return;
+  const s = Math.min(1, (innerHeight - 40) / 870, (innerWidth - 32) / 414);
+  $('#stage').style.transform = `scale(${s})`;
+}
+addEventListener('resize', fit); fit();
+
+renderAll(); setTab('home');
+
+// Lets :active tap animations fire on iOS
+document.addEventListener('touchstart', () => {}, { passive: true });
+
+// Offline support (only works once the app is hosted on https)
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
